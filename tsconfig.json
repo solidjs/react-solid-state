@@ -1,0 +1,12 @@
+{
+  "include": ["./src"],
+  "compilerOptions": {
+    "declaration": true,
+    "target": "esnext",
+    "newLine": "LF",
+    "moduleResolution": "node",
+    "strict": true,
+    "outDir": "./dist",
+    "jsx": "preserve"
+  }
+}
