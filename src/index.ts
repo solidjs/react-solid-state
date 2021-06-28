@@ -9,18 +9,16 @@ import {
   useState as rState
 } from "react";
 import {
-  createComputed,
-  createEffect,
-  createMemo,
-  createMutable,
+  createComputed as sComputed,
+  createEffect as sEffect,
+  createMemo as sMemo,
   createRoot,
-  createSignal,
-  createState,
-  onCleanup,
-  State
+  createSignal as sSignal,
+  onCleanup as sCleanup
 } from "solid-js";
-
-export { batch, reconcile, untrack } from "solid-js";
+import { createMutable, createStore, Store } from "solid-js/store";
+export { batch, untrack } from "solid-js";
+export { reconcile, produce } from "solid-js/store";
 
 interface CreateComputed<T> {
   (fn: (v?: T) => T, value: T): void;
@@ -69,11 +67,11 @@ export function useObserver(fn: ReactElement | (() => JSX.Element)) {
   if (!dispose.current) {
     createRoot(disposer => {
       dispose.current = disposer;
-      createComputed(() => {
+      sComputed(() => {
         const v = tracking() as { top?: boolean };
         if (!("top" in v)) return;
         else if (v.top && run.current)
-          results.current = ((run.current as {}) as () => typeof results.current)();
+          results.current = (run.current as {} as () => typeof results.current)();
         else forceUpdate();
         v.top = false;
       });
@@ -92,12 +90,12 @@ export function withSolid<P extends object>(
   });
 }
 
-export function useState<T>(state: T | State<T>, options?: { name?: string }) {
-  if (inSolidEffect) return createState<T>(state, options);
-  return rMemo(() => createState<T>(state, options), []);
+export function useStore<T>(state: T | Store<T>, options?: { name?: string }) {
+  if (inSolidEffect) return createStore<T>(state, options);
+  return rMemo(() => createStore<T>(state, options), []);
 }
 
-export function useMutable<T>(state: T | State<T>, options?: { name?: string }) {
+export function useMutable<T>(state: T | Store<T>, options?: { name?: string }) {
   if (inSolidEffect) return createMutable<T>(state, options);
   return rMemo(() => createMutable<T>(state, options), []);
 }
@@ -106,48 +104,59 @@ export function useSignal<T>(
   value: T,
   options?: { equals?: false | ((prev: T, next: T) => boolean); name?: string }
 ) {
-  if (inSolidEffect) return createSignal<T>(value, options);
-  return rMemo(() => createSignal<T>(value, options), []);
+  if (inSolidEffect) return sSignal<T>(value, options);
+  return rMemo(() => sSignal<T>(value, options), []);
 }
 
 export function useEffect<T>(...args: Parameters<CreateEffect<T>>) {
-  if (inSolidEffect) return createEffect<T>(...args);
+  if (inSolidEffect) return sEffect<T>(...args);
   const dispose = rRef<() => void>();
   rEffect(() => dispose.current, []);
   if (!dispose.current) {
     createRoot(disposer => {
       dispose.current = disposer;
-      createEffect<T>(...trackNesting(args));
+      sEffect<T>(...trackNesting(args));
     });
   }
 }
 
 export function useComputed<T>(...args: Parameters<CreateComputed<T>>) {
-  if (inSolidEffect) return createComputed<T>(...args);
+  if (inSolidEffect) return sComputed<T>(...args);
   const dispose = rRef<() => void>();
   rEffect(() => dispose.current, []);
   if (!dispose.current) {
     createRoot(disposer => {
       dispose.current = disposer;
-      createComputed(...trackNesting(args));
+      sComputed(...trackNesting(args));
     });
   }
 }
 
 export function useMemo<T>(...args: Parameters<CreateMemo<T>>) {
-  if (inSolidEffect) return createMemo<T>(...args);
+  if (inSolidEffect) return sMemo<T>(...args);
   let dispose: () => void;
   rEffect(() => dispose, []);
   return rMemo(
     () =>
       createRoot(disposer => {
         dispose = disposer;
-        return createMemo(...trackNesting(args));
+        return sMemo(...trackNesting(args));
       }),
     []
   );
 }
 
-export function useCleanup(fn: Parameters<typeof onCleanup>[0]) {
-  inSolidEffect ? onCleanup(fn) : rEffect(() => fn, []);
+export function useCleanup(fn: Parameters<typeof sCleanup>[0]) {
+  inSolidEffect ? sCleanup(fn) : rEffect(() => fn, []);
 }
+
+// solid naming convention for easy swap
+export {
+  useSignal as createSignal,
+  useMemo as createMemo,
+  useCleanup as onCleanup,
+  useEffect as createEffect,
+  useComputed as createComputed,
+  useStore as createStore,
+  useMutable as createMutable
+};

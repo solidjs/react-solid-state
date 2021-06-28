@@ -4,31 +4,31 @@ import { render, cleanup, act } from "react-testing-library";
 import {
   withSolid,
   useObserver,
-  useState,
-  useMutable,
-  useEffect,
-  useComputed,
-  useMemo,
-  useSignal,
-  useCleanup,
+  createStore,
+  createMutable,
+  createEffect,
+  createComputed,
+  createMemo,
+  createSignal,
+  onCleanup,
   untrack
 } from "../src/index";
 
 interface OnCleanupProp {
-  onCleanup?: () => void
+  handleCleanup?: () => void
 }
 
-const Counter = withSolid<OnCleanupProp>(({ onCleanup }) => {
-  const [state, setState] = useState({ count: 0, tick: 0 }),
-    [count, setCount] = useSignal(10),
-    getCounterText = useMemo(() => `Counter ${state.count} ${count()}`);
-  useComputed(() => {
+const Counter = withSolid<OnCleanupProp>(({ handleCleanup }) => {
+  const [state, setState] = createStore({ count: 0, tick: 0 }),
+    [count, setCount] = createSignal(10),
+    getCounterText = createMemo(() => `Counter ${state.count} ${count()}`);
+  createComputed(() => {
     if (state.tick > 0) {
       setState("count", c => c + 1);
       setCount(untrack(count) + 1);
     }
-  });
-  useCleanup(() => onCleanup());
+  }, undefined);
+  onCleanup(() => handleCleanup());
   return () => (
     <div
       onClick={() => {
@@ -40,19 +40,19 @@ const Counter = withSolid<OnCleanupProp>(({ onCleanup }) => {
   );
 });
 
-const CounterMutable = withSolid<OnCleanupProp>((({ onCleanup }) => {
-  const state = useMutable({ count: 0, tick: 0 }),
-    [count, setCount] = useSignal(10),
-    getCounterText = useMemo(() => `Counter ${state.count} ${count()}`);
-  useComputed(() => {
+const CounterMutable = withSolid<OnCleanupProp>((({ handleCleanup }) => {
+  const state = createMutable({ count: 0, tick: 0 }),
+    [count, setCount] = createSignal(10),
+    getCounterText = createMemo(() => `Counter ${state.count} ${count()}`);
+  createComputed(() => {
     if (state.tick > 0) {
       untrack(() => {
         state.count++;
         setCount(count() + 1);
       })
     }
-  });
-  useCleanup(() => onCleanup());
+  }, undefined);
+  onCleanup(() => handleCleanup());
   return () => (
     <div
       onClick={() => state.tick++}
@@ -63,17 +63,17 @@ const CounterMutable = withSolid<OnCleanupProp>((({ onCleanup }) => {
 }));
 
 const Nested = () => {
-  const [a, setA] = useSignal(0),
-    [result, setResult] = useSignal(0),
+  const [a, setA] = createSignal(0),
+    [result, setResult] = createSignal(0),
     refB = useRef(null),
     incrementA = useCallback(() => setA(a() + 1), []),
     incrementB = useCallback(() => refB.current.set(refB.current.value() + 1), []);
-  useEffect(() => {
-    const [b, setB] = useSignal(a());
+  createEffect(() => {
+    const [b, setB] = createSignal(a());
     refB.current = { value: b, set: setB };
-    useEffect(() => setResult(b()));
-    useCleanup(() => (refB.current = undefined));
-  });
+    createEffect(() => setResult(b()), undefined);
+    onCleanup(() => (refB.current = undefined));
+  }, undefined);
   return useObserver(() => (
     <>
       <div onClick={incrementA} />
@@ -89,7 +89,7 @@ describe("Simple Counter", () => {
     disposed = true;
   }
   test("Create Component", () => {
-    const { container } = render(<Counter onCleanup={handleCleanup} />);
+    const { container } = render(<Counter handleCleanup={handleCleanup} />);
     expect(container.firstElementChild.innerHTML).toBe("Counter 0 10");
     ref = container.firstChild;
   });
@@ -112,7 +112,7 @@ describe("Simple Mutable Counter", () => {
     disposed = true;
   }
   test("Create Component", () => {
-    const { container } = render(<CounterMutable onCleanup={handleCleanup} />);
+    const { container } = render(<CounterMutable handleCleanup={handleCleanup} />);
     expect(container.firstElementChild.innerHTML).toBe("Counter 0 10");
     ref = container.firstChild;
   });

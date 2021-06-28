@@ -5,7 +5,7 @@ module.exports = (request, options) => {
       if(!pkg.name.startsWith("solid-js")) return pkg;
       return {
         ...pkg,
-        main: pkg.browser || pkg.main,
+        main: pkg.browser ? pkg.browser[pkg.main] : pkg.main,
       };
     },
   });
