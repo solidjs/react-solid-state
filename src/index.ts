@@ -22,10 +22,14 @@ export { reconcile, produce } from "solid-js/store";
 
 interface CreateComputed<T> {
   (fn: (v?: T) => T, value: T): void;
+  value?: undefined,
+  options?: { equals?: false | ((prev: T, next: T) => boolean) }
 }
 
 interface CreateEffect<T> {
   (fn: (v?: T) => T, value: T): void;
+  value?: undefined,
+  options?: { equals?: false | ((prev: T, next: T) => boolean) }
 }
 
 interface CreateMemo<T> {
@@ -72,7 +76,7 @@ export function useObserver(fn: ReactElement | (() => JSX.Element)) {
         if (!("top" in v)) return;
         else if (v.top && run.current)
           results.current = (run.current as {} as () => typeof results.current)();
-        else forceUpdate();
+        else queueMicrotask(forceUpdate);
         v.top = false;
       });
     });

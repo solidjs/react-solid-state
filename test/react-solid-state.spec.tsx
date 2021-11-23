@@ -93,10 +93,12 @@ describe("Simple Counter", () => {
     expect(container.firstElementChild.innerHTML).toBe("Counter 0 10");
     ref = container.firstChild;
   });
-  test("Triggering Computed", () => {
+  test("Triggering Computed", async () => {
     act(() => ref.click());
+    await Promise.resolve();
     expect(ref.innerHTML).toBe("Counter 1 11");
     act(() => ref.click());
+    await Promise.resolve();
     expect(ref.innerHTML).toBe("Counter 2 12");
   });
   test("Cleanup", () => {
@@ -116,10 +118,12 @@ describe("Simple Mutable Counter", () => {
     expect(container.firstElementChild.innerHTML).toBe("Counter 0 10");
     ref = container.firstChild;
   });
-  test("Triggering Computed", () => {
+  test("Triggering Computed", async () => {
     act(() => ref.click());
+    await Promise.resolve();
     expect(ref.innerHTML).toBe("Counter 1 11");
     act(() => ref.click());
+    await Promise.resolve();
     expect(ref.innerHTML).toBe("Counter 2 12");
   });
   test("Cleanup", () => {
@@ -136,14 +140,18 @@ describe("Nested Effect", () => {
     expect(container.children[2].innerHTML).toBe("0");
     ref = container.childNodes;
   });
-  test("Triggering Effect", () => {
+  test("Triggering Effect", async () => {
     act(() => ref[0].click());
+    await Promise.resolve();
     expect(ref[2].innerHTML).toBe("1");
     act(() => ref[1].click());
+    await Promise.resolve();
     expect(ref[2].innerHTML).toBe("2");
     act(() => ref[1].click());
+    await Promise.resolve();
     expect(ref[2].innerHTML).toBe("3");
     act(() => ref[0].click());
+    await Promise.resolve();
     expect(ref[2].innerHTML).toBe("2");
   });
   test("Cleanup", () => {
