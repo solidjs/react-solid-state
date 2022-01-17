@@ -1,7 +1,6 @@
 import {
   memo,
   PropsWithChildren,
-  ReactElement,
   useCallback as rCallback,
   useEffect as rEffect,
   useMemo as rMemo,
@@ -14,7 +13,8 @@ import {
   createMemo as sMemo,
   createRoot,
   createSignal as sSignal,
-  onCleanup as sCleanup
+  onCleanup as sCleanup,
+  createReaction
 } from "solid-js";
 import { createMutable, createStore, Store } from "solid-js/store";
 export { batch, untrack } from "solid-js";
@@ -22,14 +22,14 @@ export { reconcile, produce } from "solid-js/store";
 
 interface CreateComputed<T> {
   (fn: (v?: T) => T, value: T): void;
-  value?: undefined,
-  options?: { equals?: false | ((prev: T, next: T) => boolean) }
+  value?: undefined;
+  options?: { equals?: false | ((prev: T, next: T) => boolean) };
 }
 
 interface CreateEffect<T> {
   (fn: (v?: T) => T, value: T): void;
-  value?: undefined,
-  options?: { equals?: false | ((prev: T, next: T) => boolean) }
+  value?: undefined;
+  options?: { equals?: false | ((prev: T, next: T) => boolean) };
 }
 
 interface CreateMemo<T> {
@@ -60,29 +60,20 @@ function useForceUpdate() {
   return rCallback(() => setTick(t => t + 1), []);
 }
 
-export function useObserver(fn: ReactElement | (() => JSX.Element)) {
+export function useObserver<T>(fn: () => T) {
   const forceUpdate = useForceUpdate(),
-    [tracking, trigger] = useSignal({}),
-    run = rRef<ReactElement | (() => JSX.Element)>(),
-    dispose = rRef<() => void>(),
-    results = rRef<ReactElement | null>();
-  run.current = fn;
-  rEffect(() => dispose.current, []);
-  if (!dispose.current) {
-    createRoot(disposer => {
-      dispose.current = disposer;
-      sComputed(() => {
-        const v = tracking() as { top?: boolean };
-        if (!("top" in v)) return;
-        else if (v.top && run.current)
-          results.current = (run.current as {} as () => typeof results.current)();
-        else queueMicrotask(forceUpdate);
-        v.top = false;
-      });
-    });
+    reaction = rRef<{ dispose: () => void; track: (fn: () => void) => void }>();
+  if (!reaction.current) {
+    reaction.current = createRoot(dispose => ({
+      dispose,
+      track: createReaction(forceUpdate)
+    }));
   }
-  trigger({ top: true });
-  return results.current;
+  rEffect(() => reaction.current!.dispose, []);
+
+  let rendering!: T;
+  reaction.current.track(() => (rendering = fn()));
+  return rendering;
 }
 
 export function withSolid<P extends object>(
@@ -99,7 +90,7 @@ export function useStore<T>(state: T | Store<T>, options?: { name?: string }) {
   return rMemo(() => createStore<T>(state, options), []);
 }
 
-export function useMutable<T>(state: T | Store<T>, options?: { name?: string }) {
+export function useMutable<T>(state: T, options?: { name?: string }) {
   if (inSolidEffect) return createMutable<T>(state, options);
   return rMemo(() => createMutable<T>(state, options), []);
 }

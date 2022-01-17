@@ -1,4 +1,4 @@
-import React, { useRef, useCallback} from "react";
+import React, { useRef, useCallback } from "react";
 import { render, cleanup, act } from "react-testing-library";
 
 import {
@@ -15,11 +15,11 @@ import {
 } from "../src/index";
 
 interface OnCleanupProp {
-  handleCleanup?: () => void
+  handleCleanup?: () => void;
 }
 
 const Counter = withSolid<OnCleanupProp>(({ handleCleanup }) => {
-  const [state, setState] = createStore({ count: 0, tick: 0 }),
+  const [state, setState] = createStore<{ count: number; tick: number }>({ count: 0, tick: 0 }),
     [count, setCount] = createSignal(10),
     getCounterText = createMemo(() => `Counter ${state.count} ${count()}`);
   createComputed(() => {
@@ -40,7 +40,7 @@ const Counter = withSolid<OnCleanupProp>(({ handleCleanup }) => {
   );
 });
 
-const CounterMutable = withSolid<OnCleanupProp>((({ handleCleanup }) => {
+const CounterMutable = withSolid<OnCleanupProp>(({ handleCleanup }) => {
   const state = createMutable({ count: 0, tick: 0 }),
     [count, setCount] = createSignal(10),
     getCounterText = createMemo(() => `Counter ${state.count} ${count()}`);
@@ -49,18 +49,12 @@ const CounterMutable = withSolid<OnCleanupProp>((({ handleCleanup }) => {
       untrack(() => {
         state.count++;
         setCount(count() + 1);
-      })
+      });
     }
   }, undefined);
   onCleanup(() => handleCleanup());
-  return () => (
-    <div
-      onClick={() => state.tick++}
-    >
-      {getCounterText()}
-    </div>
-  );
-}));
+  return () => <div onClick={() => state.tick++}>{getCounterText()}</div>;
+});
 
 const Nested = () => {
   const [a, setA] = createSignal(0),
@@ -95,10 +89,8 @@ describe("Simple Counter", () => {
   });
   test("Triggering Computed", async () => {
     act(() => ref.click());
-    await Promise.resolve();
     expect(ref.innerHTML).toBe("Counter 1 11");
     act(() => ref.click());
-    await Promise.resolve();
     expect(ref.innerHTML).toBe("Counter 2 12");
   });
   test("Cleanup", () => {
@@ -120,10 +112,8 @@ describe("Simple Mutable Counter", () => {
   });
   test("Triggering Computed", async () => {
     act(() => ref.click());
-    await Promise.resolve();
     expect(ref.innerHTML).toBe("Counter 1 11");
     act(() => ref.click());
-    await Promise.resolve();
     expect(ref.innerHTML).toBe("Counter 2 12");
   });
   test("Cleanup", () => {
@@ -142,16 +132,12 @@ describe("Nested Effect", () => {
   });
   test("Triggering Effect", async () => {
     act(() => ref[0].click());
-    await Promise.resolve();
     expect(ref[2].innerHTML).toBe("1");
     act(() => ref[1].click());
-    await Promise.resolve();
     expect(ref[2].innerHTML).toBe("2");
     act(() => ref[1].click());
-    await Promise.resolve();
     expect(ref[2].innerHTML).toBe("3");
     act(() => ref[0].click());
-    await Promise.resolve();
     expect(ref[2].innerHTML).toBe("2");
   });
   test("Cleanup", () => {
